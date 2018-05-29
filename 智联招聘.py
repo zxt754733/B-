@@ -6,87 +6,73 @@ File    : 智联招聘.py
 Software: PyCharm
 '''
 
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+
 from pyquery import PyQuery as pq
+import requests
 import pymysql
 import time
+import six
+import re
 
-browser = webdriver.PhantomJS(service_args=['--load-images=false', '--disk-cache=true'])
-browser.get('https://sou.zhaopin.com/jobs/searchresult.ashx?jl=%E5%B9%BF%E5%B7%9E&sm=0&p=1')
-wait = WebDriverWait(browser, 10)
-browser.set_window_size(900, 600)
+def get_city_companies(html):
+    res = requests.get(html)
+    res.encoding = 'gb2312'
+    data = res.text
+    # print(data)
+    city_companies = re.findall(r'<a.*?href="(.*?)".*?_blank">(.*?)</a>', data)
+    # print(city_companies)
+    for city_company in city_companies[:33]:
+        print(city_company[1] + ':  https:' + city_company[0])
+        city_companie_url = 'https:' + city_company[0]
+        partition_pages(city_companie_url)
 
-# def database():
+def partition_pages(html):
+    html = html + 'p1'
+    for page in range(1, 100):
+        print('page:' + str(page))
+        html = re.sub(r'(\d+)', str(page), html)
+        print(html)
+        get_company_url(html)
+        time.sleep(2)
 
+def get_company_url(html):
+    res = requests.get(html)
+    res.encoding = 'utf-8'
+    data = res.text
+    # print(data)
+    companies_url = re.findall(r'href="(http://company\.zhaopin\.com/CC\d+\.htm)".*?</a>', data)
+    for company_url in companies_url:
+        print(company_url)
+        company_info(company_url)
 
-def next_page(page_num):
-    try:
-        input_box = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "#goto")))
-        search_button = wait.until(
-            EC.element_to_be_clickable(
-                (By.CSS_SELECTOR, "body > div.main > div.search_newlist_main > div.newlist_main > form > div.clearfix "
-                                  "> div.newlist_wrap.fl > div.pagesDown > ul > li.nextpagego-box > button")
-            )
-        )
-        input_box.clear()
-        input_box.send_keys(page_num)
-        search_button.click()
-        time.sleep(0.5)
-        wait.until(
-            EC.text_to_be_present_in_element(
-                (By.CSS_SELECTOR, "body > div.main > div.search_newlist_main > div.newlist_main > form > div.clearfix "
-                                  "> div.newlist_wrap.fl > div.pagesDown > ul > li:nth-child(3) > a"), str(page_num)
-            )
-        )
-        get_job_url()
-    except TimeoutError:
-        return next_page(page_num)
-
-def get_job_url():
-    try:
-        wait.until(
-            EC.presence_of_element_located(
-                (By.CSS_SELECTOR, "#newlist_list_content_table > table:nth-child(12) .zwmc")
-            )
-        )
-        html = browser.page_source
-        doc = pq(html)
-        items = doc("#newlist_list_content_table > table:nth-child(12) .zwmc").items()
-        for item in items:
-            job_url = item.find(' a').attr('href')
-            get_job(job_url)
-    except Exception as e:
-        print(e)
-
-def get_job(job_url):
-    browser.get(job_url)
-    try:
-        wait.until(
-            EC.presence_of_element_located(
-                (By.CSS_SELECTOR, "body")
-            )
-        )
-        html = browser.page_source
-        doc = pq(html)
-        company = doc("body > div.top-fixed-box > div.fixed-inner-box")
-        for company_info in company:
-            com_info = {
-                '职位': company_info.find('.f1').text(),
-                '公司': company_info.find(' a').text(),
-                '公司网址': company_info.find(' h2 a').attr('href')
-            }
-            print(com_info)
-            time.sleep(0.25)
-    except Exception as e:
-        print(e)
+def company_info(html):
+    data = pq(html)
+    # print(data)
+    positions = data('.cLeft').items()
+    briefs = data('.mainLeft').items()
+    for brief, position in six.moves.zip(briefs, positions):
+        company_brief = brief.find('.comTinyDes span').text().split()
+        # print(company_brief)
+        details = data('.company-content').text().split()
+        # print(details)
+        job_infos = position.find('span').text().split()
+        job_info = job_infos[3:]
+        job_duty = position.find('p').text().split()
+        company = {
+            'name': brief.find('h1').text(),
+            'address': brief.find('.comAddress').text(),
+            'nature': company_brief[1],
+            'size': company_brief[3],
+            'industry': company_brief[-3],
+            'details': details[1] + details[2],
+            'job_requirements': job_info[0] + '; ' + job_info[1],
+            'job_duty': ''.join(job_duty)
+        }
+        print(company)
 
 def main():
-    for i in range(1, 90):
-        next_page(i)
-    browser.close()
+    html = 'https://www.zhaopin.com/jobseeker/index_industry.html'
+    get_city_companies(html)
 
 if __name__ == '__main__':
     main()
