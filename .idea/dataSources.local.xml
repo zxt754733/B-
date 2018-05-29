@@ -48,5 +48,15 @@
       <user-name>zxt</user-name>
       <introspection-schemas>*:电影天堂</introspection-schemas>
     </data-source>
+    <data-source name="智联招聘@localhost" uuid="5dfe8ea8-42dc-4c31-bb7f-56f73da5b2cd">
+      <database-info product="MySQL" version="5.7.22-log" jdbc-version="4.0" driver-name="MySQL Connector Java" driver-version="mysql-connector-java-5.1.46 ( Revision: 9cc87a48e75c2d2e87c1a293b2862ce651cb256e )">
+        <extra-name-characters>#@</extra-name-characters>
+        <identifier-quote-string>`</identifier-quote-string>
+      </database-info>
+      <case-sensitivity plain-identifiers="lower" quoted-identifiers="lower" />
+      <secret-storage>master_key</secret-storage>
+      <user-name>zxt</user-name>
+      <introspection-schemas>*:智联招聘</introspection-schemas>
+    </data-source>
   </component>
 </project>

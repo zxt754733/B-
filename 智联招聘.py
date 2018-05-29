@@ -14,6 +14,30 @@ import time
 import six
 import re
 
+
+def database(city, name, website, address, nature, size, industry, introduce, job_requirements, job_duty):
+    city = str(city)
+    name = str(name)
+    website = str(website)
+    address = str(address)
+    nature = str(nature)
+    size = str(size)
+    industry = str(industry)
+    introduce = str(introduce)
+    job_requirements = str(job_requirements)
+    job_duty = str(job_duty)
+    try:
+        con = pymysql.connect(host='localhost', user='zxt', password='754733.t', db='智联招聘', charset='utf8')
+        cur = con.cursor()
+        sql = "insert ignore into 职位信息(城市, 公司, 公司网址,公司地址, 公司性质, 公司规模, 公司行业, 公司介绍, 岗位要求, " \
+              "岗位职责) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
+        cur.execute(sql, (city, name, website, address, nature, size, industry, introduce, job_requirements, job_duty))
+        con.commit()
+        cur.close()
+        con.close()
+    except Exception as e:
+        print(e)
+
 def get_city_companies(html):
     res = requests.get(html)
     res.encoding = 'gb2312'
@@ -24,28 +48,29 @@ def get_city_companies(html):
     for city_company in city_companies[:33]:
         print(city_company[1] + ':  https:' + city_company[0])
         city_companie_url = 'https:' + city_company[0]
-        partition_pages(city_companie_url)
+        city = city_company[1]
+        partition_pages(city_companie_url, city)
 
-def partition_pages(html):
+def partition_pages(html, city):
     html = html + 'p1'
     for page in range(1, 100):
         print('page:' + str(page))
         html = re.sub(r'(\d+)', str(page), html)
         print(html)
-        get_company_url(html)
+        get_company_url(html, city)
         time.sleep(2)
 
-def get_company_url(html):
+def get_company_url(html, city):
     res = requests.get(html)
     res.encoding = 'utf-8'
     data = res.text
     # print(data)
     companies_url = re.findall(r'href="(http://company\.zhaopin\.com/CC\d+\.htm)".*?</a>', data)
     for company_url in companies_url:
-        print(company_url)
-        company_info(company_url)
+        # print(company_url)
+        company_info(company_url, city)
 
-def company_info(html):
+def company_info(html, city):
     data = pq(html)
     # print(data)
     positions = data('.cLeft').items()
@@ -54,21 +79,32 @@ def company_info(html):
         company_brief = brief.find('.comTinyDes span').text().split()
         # print(company_brief)
         details = data('.company-content').text().split()
+        introduce = ''.join(details)
         # print(details)
         job_infos = position.find('span').text().split()
         job_info = job_infos[3:]
         job_duty = position.find('p').text().split()
         company = {
+            'city': city,
             'name': brief.find('h1').text(),
+            'website': html,
             'address': brief.find('.comAddress').text(),
             'nature': company_brief[1],
             'size': company_brief[3],
             'industry': company_brief[-3],
-            'details': details[1] + details[2],
+            'introduce': introduce,
             'job_requirements': job_info[0] + '; ' + job_info[1],
             'job_duty': ''.join(job_duty)
         }
-        print(company)
+        # print(company)
+        try:
+            database(company['city'], company['name'], company['website'], company['address'], company['nature'],
+                     company['size'], company['industry'], company['introduce'], company['job_requirements'],
+                     company['job_duty'])
+            print('数据库插入成功！')
+        except:
+            print('数据库插入失败！')
+        time.sleep(0.25)
 
 def main():
     html = 'https://www.zhaopin.com/jobseeker/index_industry.html'
