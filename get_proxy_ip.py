@@ -11,7 +11,6 @@ import threading
 import requests
 import pymysql
 import random
-import socket
 import time
 import re
 
@@ -83,7 +82,7 @@ def main():
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
                       'Chrome/66.0.3359.139 Safari/537.36'
     }
-    for i in range(1, 2):
+    for i in range(1, 3000):
         html = 'http://www.xicidaili.com/nn/{}'.format(i)
         # print(html)
         res = requests.get(html, headers=headers)
@@ -91,7 +90,7 @@ def main():
         data = res.text
         proxy_list = get_proxy(data)
         threads = []
-        for j in range(100):
+        for j in range(len(proxy_list)):
             proxy_test(proxy_list, j)
             for a in range(len(proxy_list)):
                 thread = threading.Thread(target=proxy_test, args=(proxy_list, a))
