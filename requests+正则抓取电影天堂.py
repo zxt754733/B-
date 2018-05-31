@@ -32,6 +32,7 @@ def get_partition_url(html):
     except RequestException as rex:
         print(rex)
 
+
 def get_movie_url(html):
     res = requests.get(html)
     res.encoding = 'gbk'
@@ -46,6 +47,7 @@ def get_movie_url(html):
         get_movie_info(res)
         time.sleep(0.25)
 
+
 def get_partition_page(html):
     res = requests.get(html)
     res.encoding = 'gbk'
@@ -58,6 +60,7 @@ def get_partition_page(html):
         print(result)
         get_movie_url(res)
         time.sleep(1.5)
+
 
 def get_movie_info(html):
     res = requests.get(html)
@@ -88,6 +91,7 @@ def get_movie_info(html):
     except Exception as e:
         print('数据库插入失败：' + e)
 
+
 def save_to_mysql(movie_title, imgurl, movie_magnet, movieinfo):
     movie_title = str(movie_title)
     imgurl = str(imgurl)
@@ -104,9 +108,11 @@ def save_to_mysql(movie_title, imgurl, movie_magnet, movieinfo):
     except Exception as e:
         print(e)
 
+
 def main():
     html = 'http://www.dytt8.net/'
     get_partition_url(html)
+
 
 if __name__ == '__main__':
     main()

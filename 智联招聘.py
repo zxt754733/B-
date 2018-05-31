@@ -38,8 +38,13 @@ def database(city, name, website, address, nature, size, industry, introduce, jo
     except Exception as e:
         print(e)
 
+
 def get_city_companies(html):
-    res = requests.get(html)
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                      'Chrome/66.0.3359.139 Safari/537.36'
+    }
+    res = requests.get(html, headers=headers)
     res.encoding = 'gb2312'
     data = res.text
     # print(data)
@@ -51,6 +56,7 @@ def get_city_companies(html):
         city = city_company[1]
         partition_pages(city_companie_url, city)
 
+
 def partition_pages(html, city):
     html = html + 'p1'
     for page in range(1, 100):
@@ -58,10 +64,15 @@ def partition_pages(html, city):
         html = re.sub(r'(\d+)', str(page), html)
         print(html)
         get_company_url(html, city)
-        time.sleep(2)
+        time.sleep(1)
+
 
 def get_company_url(html, city):
-    res = requests.get(html)
+    headers = {
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                      'Chrome/66.0.3359.139 Safari/537.36'
+    }
+    res = requests.get(html, headers=headers)
     res.encoding = 'utf-8'
     data = res.text
     # print(data)
@@ -69,6 +80,7 @@ def get_company_url(html, city):
     for company_url in companies_url:
         # print(company_url)
         company_info(company_url, city)
+
 
 def company_info(html, city):
     data = pq(html)
@@ -104,11 +116,13 @@ def company_info(html, city):
             print('数据库插入成功！')
         except:
             print('数据库插入失败！')
-        time.sleep(0.25)
+        time.sleep(0.2)
+
 
 def main():
     html = 'https://www.zhaopin.com/jobseeker/index_industry.html'
     get_city_companies(html)
+
 
 if __name__ == '__main__':
     main()
