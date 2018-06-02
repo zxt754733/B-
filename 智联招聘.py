@@ -8,12 +8,16 @@ Software: PyCharm
 
 
 from pyquery import PyQuery as pq
+import threading
 import requests
 import pymysql
 import random
 import time
 import six
 import re
+
+
+lock = threading.Lock()
 
 
 def get_city_companies(html):
@@ -29,9 +33,9 @@ def get_city_companies(html):
     # print(city_companies)
     for city_company in city_companies[:33]:
         print(city_company[1] + ':  https:' + city_company[0])
-        city_companie_url = 'https:' + city_company[0]
+        city_company_url = 'https:' + city_company[0]
         city = city_company[1]
-        partition_pages(city_companie_url, city)
+        partition_pages(city_company_url, city)
 
 
 def partition_pages(html, city):
@@ -109,17 +113,24 @@ def get_company_url(html, city):
         data = res.text
         # print(data)
         companies_url = re.findall(r'href="(http://company\.zhaopin\.com/CC\d+\.htm)".*?</a>', data)
+        threads = []
         for company_url in companies_url:
             # print(company_url)
             if requests.get(company_url).status_code == 200:
-                company_info(company_url, city)
+                thread = threading.Thread(target=company_info, args=(company_url, city))
+                threads.append(thread)
+                thread.start()
             else:
                 return
+        for thread in threads:
+            thread.join()
     else:
         return
 
 
+
 def company_info(html, city):
+    t1 = time.time()
     data = pq(html)
     # print(data)
     positions = data('.cLeft').items()
@@ -127,24 +138,32 @@ def company_info(html, city):
     for brief, position in six.moves.zip(briefs, positions):
         company_brief = brief.find('.comTinyDes span').text().split()
         # print(company_brief)
-        details = data('.company-content').text().split()
-        introduce = ''.join(details)
-        # print(details)
-        job_infos = position.find('span').text().split()
-        job_info = job_infos[3:]
-        job_duty = position.find('p').text().split()
-        company = {
-            'city': city,
-            'name': brief.find('h1').text(),
-            'website': html,
-            'address': brief.find('.comAddress').text(),
-            'nature': company_brief[1],
-            'size': company_brief[3],
-            'industry': company_brief[-3],
-            'introduce': introduce,
-            'job_requirements': job_info[0] + '; ' + job_info[1],
-            'job_duty': ''.join(job_duty)
-        }
+        if len(company_brief) < 1:
+            return
+        elif len(company_brief) < 3:
+            return
+        else:
+            lock.acquire()
+            details = data('.company-content').text().split()
+            introduce = ''.join(details)
+            # print(details)
+            job_infos = position.find('span').text().split()
+            job_info = job_infos[3:]
+            job_duty = position.find('p').text().split()
+            company = {
+                'city': city,
+                'name': brief.find('h1').text(),
+                'website': html,
+                'address': brief.find('.comAddress').text(),
+                'nature': company_brief[1],
+                'size': company_brief[3],
+                'industry': company_brief[-3],
+                'introduce': introduce,
+                'job_requirements': job_info[0] + '; ' + job_info[1],
+                'job_duty': ''.join(job_duty)
+            }
+        lock.release()
+
         # print(company)
         try:
             database(company['city'], company['name'], company['website'], company['address'], company['nature'],
@@ -154,7 +173,8 @@ def company_info(html, city):
             print('数据库插入成功！')
         except:
             print('数据库插入失败！')
-        time.sleep(0.2)
+        sleep_time = random.random()
+        time.sleep(sleep_time)
 
 
 def database(city, name, website, address, nature, size, industry, introduce, job_requirements, job_duty):
@@ -169,7 +189,7 @@ def database(city, name, website, address, nature, size, industry, introduce, jo
     job_requirements = str(job_requirements)
     job_duty = str(job_duty)
     try:
-        con = pymysql.connect(host='localhost', user='zxt', password='754733.t', db='智联招聘', charset='utf8')
+        con = pymysql.connect(host='localhost', user='root', password='754733.t', db='智联招聘', charset='utf8')
         cur = con.cursor()
         sql = "insert ignore into 职位信息(城市, 公司, 公司网址,公司地址, 公司性质, 公司规模, 公司行业, 公司介绍, 岗位要求, " \
               "岗位职责) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
